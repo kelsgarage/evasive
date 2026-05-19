@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pikes Peak Thermal Budget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0d12;
+  --bg2:#0f1419;
+  --panel:#141923;
+  --panel2:#1a202c;
+  --line:#252b38;
+  --ink:#e6e8ec;
+  --ink2:#a8aeba;
+  --ink3:#6b7280;
+  --accent:#ffb000;
+  --accent2:#ff8c42;
+  --hot:#ff5b3a;
+  --cool:#3aa3ff;
+  --ok:#3ad17a;
+  --warn:#ffb000;
+  --alt:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.45;min-height:100vh}
+.page{max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+
+/* Header with mountain motif */
+header{position:relative;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
+.title-row{display:grid;grid-template-columns:1fr auto;align-items:end;gap:24px}
+header h1{font-family:'Archivo',sans-serif;font-weight:900;font-size:34px;letter-spacing:-0.025em;line-height:0.95}
+header h1 .sub{display:block;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.25em;margin-bottom:6px;text-transform:uppercase}
+header .meta{text-align:right;color:var(--ink2);font-size:10.5px;line-height:1.7;max-width:380px}
+header .meta b{color:var(--ink)}
+
+/* Elevation strip header decoration */
+.elev-strip{margin-top:16px;height:36px;background:linear-gradient(90deg,#1a3340 0%,#243a35 33%,#3a402e 66%,#403328 100%);border:1px solid var(--line);position:relative;overflow:hidden}
+.elev-strip svg{position:absolute;inset:0;width:100%;height:100%}
+.elev-strip .stage{position:absolute;top:50%;transform:translateY(-50%);font-size:9.5px;letter-spacing:0.15em;color:rgba(255,255,255,0.8);font-weight:700;text-transform:uppercase;text-shadow:0 0 4px rgba(0,0,0,0.7)}
+
+/* Layout */
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:380px 1fr}
+@media (max-width:880px){.grid-2{grid-template-columns:1fr}}
+
+.panel{background:var(--panel);border:1px solid var(--line);padding:18px}
+.panel h2{font-family:'Archivo',sans-serif;font-weight:700;font-size:11px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel h2 .tag{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.05em;color:var(--ink3);font-weight:500}
+
+/* Section dividers in inputs */
+.section-label{font-family:'Archivo';font-size:9.5px;letter-spacing:0.18em;color:var(--ink3);font-weight:700;text-transform:uppercase;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px dashed var(--line)}
+.section-label:first-child{margin-top:0}
+
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10.5px;letter-spacing:0.1em;color:var(--ink2);text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.field label .hint{color:var(--ink3);text-transform:none;letter-spacing:0;font-weight:500;font-size:10px;margin-left:6px}
+
+.slider{display:flex;align-items:center;gap:10px}
+.slider input[type="range"]{flex:1;accent-color:var(--accent)}
+.slider .v{min-width:74px;text-align:right;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;font-size:14px;font-family:'JetBrains Mono'}
+
+.presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.presets button{background:var(--panel2);border:1px solid var(--line);color:var(--ink2);
+  font-family:'JetBrains Mono',monospace;font-size:10px;padding:6px 4px;letter-spacing:0.05em;cursor:pointer;font-weight:600;text-transform:uppercase}
+.presets button:hover{background:#232936;color:var(--ink);border-color:var(--accent)}
+.presets button.active{background:var(--accent);color:#0a0d12;border-color:var(--accent)}
+
+/* Hero output */
+.hero{background:var(--panel2);border:1px solid var(--line);padding:22px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;left:0;top:0;height:3px;width:100%;background:var(--accent);transition:background 0.3s}
+.hero.danger::before{background:var(--hot)}
+.hero.ok::before{background:var(--ok)}
+.hero.warn::before{background:var(--warn)}
+.hero .label{font-family:'Archivo';font-size:11px;letter-spacing:0.2em;color:var(--ink3);text-transform:uppercase;margin-bottom:8px;font-weight:700}
+.hero .value{font-family:'Archivo';font-weight:900;font-size:64px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.hero .value small{font-size:18px;color:var(--ink2);font-weight:500;margin-left:4px;letter-spacing:0}
+.hero .ctx{margin-top:8px;font-size:11px;color:var(--ink2);font-style:italic}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);margin-bottom:14px}
+.kpis .cell{background:var(--panel);padding:13px}
+.kpis .cell .k{font-size:9.5px;letter-spacing:0.15em;color:var(--ink3);text-transform:uppercase;margin-bottom:5px;font-weight:700}
+.kpis .cell .v{font-family:'Archivo';font-weight:800;font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.kpis .cell .v small{font-size:10.5px;color:var(--ink2);font-weight:500;margin-left:3px}
+.kpis .cell .ctx{font-size:10px;color:var(--ink3);margin-top:3px}
+
+.chart-box{background:var(--panel2);border:1px solid var(--line);padding:14px;margin-bottom:14px}
+.chart-box h3{font-family:'Archivo';font-size:11px;letter-spacing:0.15em;color:var(--accent);text-transform:uppercase;margin-bottom:10px;font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.chart-box h3 .leg{font-family:'JetBrains Mono';font-size:9.5px;font-weight:500;color:var(--ink2);text-transform:none;letter-spacing:0.03em}
+.chart-box h3 .leg span{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 12px;vertical-align:middle}
+canvas{display:block;width:100%;height:auto}
+
+/* Segment cards */
+.segments{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-bottom:14px}
+.segment{background:var(--panel2);padding:13px}
+.segment .name{font-family:'Archivo';font-weight:800;font-size:11px;letter-spacing:0.18em;color:var(--accent);text-transform:uppercase;margin-bottom:8px}
+.segment .row{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--line)}
+.segment .row:last-child{border-bottom:none}
+.segment .row .k{color:var(--ink2)}
+.segment .row .v{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.segment .row .v.hot{color:var(--hot)}
+.segment .row .v.ok{color:var(--ok)}
+.segment .row .v.warn{color:var(--warn)}
+
+.lever{display:grid;grid-template-columns:160px 1fr 100px;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:11px}
+.lever:last-child{border-bottom:none}
+.lever .name{color:var(--ink2);letter-spacing:0.1em;text-transform:uppercase;font-weight:600;font-size:10.5px}
+.lever .effect{color:var(--ink)}
+.lever .delta{font-weight:700;color:var(--ok);font-variant-numeric:tabular-nums;text-align:right;font-size:13px}
+.lever .delta.bad{color:var(--hot)}
+
+.notes{font-size:11px;line-height:1.55;color:var(--ink2)}
+.notes p{margin-bottom:8px}
+.notes p b{color:var(--ink)}
+.notes .dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.notes .dot.ok{background:var(--ok)}
+.notes .dot.warn{background:var(--warn)}
+.notes .dot.hot{background:var(--hot)}
+.notes .dot.alt{background:var(--alt)}
+
+footer{margin-top:30px;padding-top:14px;border-top:1px solid var(--line);font-size:10px;color:var(--ink3);text-align:center}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="title-row">
+    <h1>
+      <span class="sub">Thermal Budget // PPIHC 2026</span>
+      Race to the Clouds
+    </h1>
+    <div class="meta">
+      <b>Tire</b> Yokohama A005 A60 / extra-layer EV<br>
+      <b>Course</b> 12.42 mi, 156 turns, +4,720 ft<br>
+      <b>Run</b> One-way ascent — no cooling laps<br>
+      <b>Window</b> 82–104 °C tread core
+    </div>
+  </div>
+  <div class="elev-strip">
+    <svg viewBox="0 0 1200 36" preserveAspectRatio="none">
+      <path d="M 0 32 L 100 28 L 250 24 L 400 20 L 600 16 L 800 10 L 1000 6 L 1200 3 L 1200 36 L 0 36 Z" fill="rgba(255,176,0,0.15)" stroke="rgba(255,176,0,0.5)" stroke-width="1"/>
+    </svg>
+    <div class="stage" style="left:2%">Start · 9,390 ft</div>
+    <div class="stage" style="left:33%">Glen Cove · 11,425 ft</div>
+    <div class="stage" style="left:62%">Devil's Playground · 12,780 ft</div>
+    <div class="stage" style="right:2%;text-align:right">Summit · 14,115 ft</div>
+  </div>
+</header>
+
+<div class="grid grid-2">
+
+<!-- LEFT: INPUTS -->
+<div class="panel">
+  <h2>Inputs <span class="tag">all editable</span></h2>
+
+  <div class="section-label">Tire baseline</div>
+
+  <div class="field">
+    <label>Per-km heat-gen rate <span class="hint">°C/km from S0x data</span></label>
+    <div class="presets" id="calib-presets">
+      <button data-val="3.96" class="">S02 baseline</button>
+      <button data-val="5.46" class="active">S01 (Walker)</button>
+      <button data-val="6.79" class="">S03 (race pace)</button>
+    </div>
+    <div class="slider" style="margin-top:8px">
+      <input type="range" id="rateInput" min="2" max="10" step="0.1" value="5.46">
+      <span class="v" id="rateVal">5.46</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Starting core temp <span class="hint">at green flag, °C</span></label>
+    <div class="slider">
+      <input type="range" id="startT" min="20" max="100" step="1" value="55">
+      <span class="v" id="startTVal">55 °C</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Cold pressure <span class="hint">psi gauge at start line</span></label>
+    <div class="slider">
+      <input type="range" id="coldP" min="18" max="32" step="0.5" value="23">
+      <span class="v" id="coldPVal">23.0 psi</span>
+    </div>
+  </div>
+
+  <div class="section-label">Course strategy</div>
+
+  <div class="field">
+    <label>Avg pace lower section <span class="hint">mph, start → Glen Cove</span></label>
+    <div class="slider">
+      <input type="range" id="paceLow" min="40" max="110" step="1" value="78">
+      <span class="v" id="paceLowVal">78 mph</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Avg pace middle <span class="hint">mph, Glen → Devil's</span></label>
+    <div class="slider">
+      <input type="range" id="paceMid" min="40" max="110" step="1" value="74">
+      <span class="v" id="paceMidVal">74 mph</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Avg pace upper <span class="hint">mph, Devil's → Summit</span></label>
+    <div class="slider">
+      <input type="range" id="paceTop" min="40" max="110" step="1" value="68">
+      <span class="v" id="paceTopVal">68 mph</span>
+    </div>
+  </div>
+
+  <div class="section-label">Environment</div>
+
+  <div class="field">
+    <label>Ambient at start <span class="hint">°C, typical 5–15</span></label>
+    <div class="slider">
+      <input type="range" id="ambStart" min="0" max="25" step="1" value="10">
+      <span class="v" id="ambStartVal">10 °C</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Lapse rate <span class="hint">°C cooler per 1000 ft up</span></label>
+    <div class="slider">
+      <input type="range" id="lapse" min="1" max="4" step="0.1" value="2.0">
+      <span class="v" id="lapseVal">2.0 °C/kft</span>
+    </div>
+  </div>
+
+  <div class="section-label">Operating ceiling</div>
+
+  <div class="field">
+    <label>Target ceiling <span class="hint">°C — when grip falls off</span></label>
+    <div class="presets" id="ceiling-presets">
+      <button data-val="104" class="active">Mfr 104</button>
+      <button data-val="110" class="">Tolerated 110</button>
+      <button data-val="120" class="">Hot 120</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- RIGHT: OUTPUTS -->
+<div>
+
+  <div class="hero" id="hero">
+    <div class="label">Predicted summit core temp</div>
+    <div class="value"><span id="summitT">—</span><small>°C</small></div>
+    <div class="ctx" id="heroCtx">Adjust inputs to compute</div>
+  </div>
+
+  <div class="kpis">
+    <div class="cell">
+      <div class="k">Run time</div>
+      <div class="v" id="runTime">—<small>min</small></div>
+      <div class="ctx">summit to start</div>
+    </div>
+    <div class="cell">
+      <div class="k">Ceiling crossed at</div>
+      <div class="v" id="crossMile">—<small>mi</small></div>
+      <div class="ctx" id="crossCtx">mile-marker</div>
+    </div>
+    <div class="cell">
+      <div class="k">Peak hot psi</div>
+      <div class="v" id="peakPsi">—<small>psi</small></div>
+      <div class="ctx" id="peakPsiCtx">cold + alt + heat</div>
+    </div>
+    <div class="cell">
+      <div class="k">In-window distance</div>
+      <div class="v" id="inWinMi">—<small>mi</small></div>
+      <div class="ctx">of 12.42 total</div>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>Core temp & altitude vs distance
+      <span class="leg">
+        <span style="background:#ffb000"></span>core temp
+        <span style="background:#a78bfa"></span>altitude
+        <span style="background:rgba(58,209,122,0.5)"></span>mfr window
+      </span>
+    </h3>
+    <canvas id="chart" width="780" height="280"></canvas>
+  </div>
+
+  <div class="segments" id="segments"></div>
+
+  <div class="panel">
+    <h2>What-if levers <span class="tag">effect on summit core</span></h2>
+    <div id="leversBox"></div>
+  </div>
+
+</div>
+</div>
+
+<div class="panel" style="margin-top:22px">
+  <h2>Methodology — Pikes Peak specifics <span class="tag">read first</span></h2>
+  <div class="notes">
+    <p><span class="dot alt"></span><b>One-way model:</b> no cooling laps — every kilometer adds heat. Cooling rate from convection is approximate: base 0.3 °C/km at sea level, increases at altitude (thinner air = less drag heating but also less cooling per unit time; net effect is small).</p>
+    <p><span class="dot alt"></span><b>Pressure model:</b> ambient pressure drops from 1010 mbar (start) to 620 mbar (summit) — that's 5.5 psi of ambient drop. Tire sealed = gauge pressure rises by both heat (gas law on absolute) AND ambient drop. A 23 psi cold-start tire reads ~28 psi at summit even with no heating, just from altitude.</p>
+    <p><span class="dot ok"></span><b>Segment heat-gen:</b> lower section is highest speed → more hysteresis cycling per km. Upper section is lower-speed turns with thinner air for cooling. Model assumes heat-gen-per-km scales with v² normalized by section.</p>
+    <p><span class="dot warn"></span><b>Ambient cooling:</b> air gets colder with altitude (configurable lapse rate). This INCREASES convective heat removal per km — partial offset to the one-way accumulation. But thinner air reduces mass flow, so the effect is bounded.</p>
+    <p><span class="dot hot"></span><b>What this tool is not:</b> not a substitute for sector-by-sector simulation. Uses three-segment averages. Doesn't capture sustained braking events (Glen Cove brake section), which can spike bead/wheel temps independently. Validate against in-car TTPMS during practice runs.</p>
+  </div>
+</div>
+
+<footer>
+  Pikes Peak thermal budget — Yokohama A005 A60 / extra-layer EV / calibrated from EVS Ioniq 5N data
+</footer>
+
+</div>
+
+<script>
+// ============ Constants ============
+const TOTAL_MI = 12.42;
+const TOTAL_KM = TOTAL_MI * 1.60934;
+const START_ALT_FT = 9390;
+const SUMMIT_ALT_FT = 14115;
+const ALT_GAIN_FT = SUMMIT_ALT_FT - START_ALT_FT;
+const GLEN_MI = 5.0;          // ~mile marker (approximate)
+const DEVILS_MI = 9.0;        // ~mile marker
+const GLEN_ALT_FT = 11425;
+const DEVILS_ALT_FT = 12780;
+
+const SEGMENTS = [
+  {name:'Lower',  start_mi:0,        end_mi:GLEN_MI,    start_ft:START_ALT_FT, end_ft:GLEN_ALT_FT,   paceVar:'paceLow'},
+  {name:'Middle', start_mi:GLEN_MI,  end_mi:DEVILS_MI,  start_ft:GLEN_ALT_FT,  end_ft:DEVILS_ALT_FT, paceVar:'paceMid'},
+  {name:'Upper',  start_mi:DEVILS_MI,end_mi:TOTAL_MI,   start_ft:DEVILS_ALT_FT,end_ft:SUMMIT_ALT_FT, paceVar:'paceTop'},
+];
+
+// Ambient pressure (mbar) by altitude (ft) — barometric approximation
+function ambientMbar(alt_ft) {
+  // Approximation: 1013 * exp(-alt_m / 8400)
+  const alt_m = alt_ft * 0.3048;
+  return 1013 * Math.exp(-alt_m / 8400);
+}
+const AMB_START_MBAR = ambientMbar(START_ALT_FT);  // ~727 mbar at 9390 ft
+const AMB_SUMMIT_MBAR = ambientMbar(SUMMIT_ALT_FT); // ~604 mbar at 14115 ft
+const MBAR_TO_PSI = 0.0145038;
+
+// ============ State ============
+const state = {
+  rate: 5.46,
+  startT: 55,
+  coldP: 23.0,
+  paceLow: 78,
+  paceMid: 74,
+  paceTop: 68,
+  ambStart: 10,
+  lapse: 2.0,
+  ceiling: 104,
+};
+
+const $ = id => document.getElementById(id);
+
+// ============ Model ============
+// Walk segments. Within each segment, compute heat-up per km, integrate.
+// Use uniform speed within segment. Output: array of {mi, t_min, alt_ft, coreT, ambT, pace}.
+function simulate(s) {
+  // Heat-gen rate scales with pace (faster = more hysteresis per second, but also more km/min)
+  // Per-km rate is reasonably constant if driving style same. We let the user set per-segment pace,
+  // and use the base rate as "per-km at S01 pace ~70 mph". Adjust slightly for pace deviation.
+  // Empirically heat-gen-per-km scales with about pace^0.3 (small dependence — most of dT/dt is per-km)
+  
+  const points = [];
+  let curMi = 0;
+  let curTmin = 0;
+  let coreT = s.startT;
+  const stepKm = 0.1;  // 100m steps
+  
+  for (let seg = 0; seg < SEGMENTS.length; seg++) {
+    const S = SEGMENTS[seg];
+    const segPace = s[S.paceVar];   // mph
+    const segPaceKph = segPace * 1.60934;
+    const segLengthMi = S.end_mi - S.start_mi;
+    const segLengthKm = segLengthMi * 1.60934;
+    const nSteps = Math.ceil(segLengthKm / stepKm);
+    
+    // Heat-gen rate adjusted slightly by pace (relative to 70 mph reference)
+    const rateScale = Math.pow(segPace / 70, 0.3);
+    const heatPerKm = s.rate * rateScale;
+    
+    for (let i = 0; i < nSteps; i++) {
+      const frac = i / nSteps;
+      const segMi = S.start_mi + frac * segLengthMi;
+      const altFt = S.start_ft + frac * (S.end_ft - S.start_ft);
+      const altKft = altFt / 1000;
+      const ambT = s.ambStart - s.lapse * (altKft - START_ALT_FT/1000);
+      
+      // Cooling rate: 0.3 °C/km base at sea level, scaled by (T_core - T_amb)
+      // Thinner air reduces cooling: factor = sqrt(ambMbar / 1013)
+      const ambMbar = ambientMbar(altFt);
+      const airFactor = Math.sqrt(ambMbar / 1013);
+      const dT_drive = coreT - ambT;
+      const coolPerKm = 0.3 * airFactor * (dT_drive / 80);  // normalized to dT=80°C reference
+      
+      // Net heat per step (km)
+      const netPerKm = heatPerKm - coolPerKm;
+      const dCore = netPerKm * stepKm;
+      coreT += dCore;
+      
+      // Time step
+      const dt_min = (stepKm / segPaceKph) * 60;
+      curTmin += dt_min;
+      
+      points.push({
+        mi: segMi + stepKm * 0.62137 / 2,  // convert km step to mi mid-point
+        kmFromStart: curMi * 1.60934 + i * stepKm,
+        t_min: curTmin,
+        alt_ft: altFt,
+        coreT: coreT,
+        ambT: ambT,
+        pace: segPace,
+        seg: S.name,
+        heatPerKm: heatPerKm,
+        coolPerKm: coolPerKm,
+      });
+    }
+    curMi = S.end_mi;
+  }
+  return points;
+}
+
+// Pressure rise: gauge pressure increases by:
+// 1. Heating: P_abs scales as T_K_ratio. Cold ~ amb temp = ambStart in Kelvin.
+// 2. Ambient drop: gauge = abs - ambient. If ambient drops, gauge rises.
+function predictPsi(coldPsiGauge, coreT, ambTempC, altFt) {
+  // Effective trapped-air temperature ≈ ambient + (core - ambient) * 0.4 (interior is colder than core)
+  const trapT_C = ambTempC + (coreT - ambTempC) * 0.4;
+  const trapT_K = trapT_C + 273.15;
+  
+  // Cold reference at ambient start
+  const coldT_K = state.ambStart + 273.15;
+  const coldAmb_psi = AMB_START_MBAR * MBAR_TO_PSI;  // absolute at start
+  const coldAbs_psi = coldPsiGauge + coldAmb_psi;
+  
+  // Hot absolute pressure
+  const hotAbs_psi = coldAbs_psi * (trapT_K / coldT_K);
+  
+  // Current ambient
+  const ambNow_psi = ambientMbar(altFt) * MBAR_TO_PSI;
+  
+  // Gauge = abs - ambient
+  return hotAbs_psi - ambNow_psi;
+}
+
+// ============ Render ============
+function render() {
+  const pts = simulate(state);
+  const summit = pts[pts.length - 1];
+  
+  // Hero
+  const heroEl = $('hero');
+  $('summitT').textContent = summit.coreT.toFixed(1);
+  if (summit.coreT > state.ceiling + 15) {
+    heroEl.className = 'hero danger';
+    $('heroCtx').textContent = `Way over ceiling (+${(summit.coreT - state.ceiling).toFixed(0)}°C) — grip gone in upper section`;
+  } else if (summit.coreT > state.ceiling) {
+    heroEl.className = 'hero warn';
+    $('heroCtx').textContent = `Over ceiling by ${(summit.coreT - state.ceiling).toFixed(0)}°C at summit — manage final third`;
+  } else if (summit.coreT < 82) {
+    heroEl.className = 'hero warn';
+    $('heroCtx').textContent = 'Below window at summit — never activated';
+  } else {
+    heroEl.className = 'hero ok';
+    $('heroCtx').textContent = `Inside window at summit — ${summit.coreT.toFixed(0)}°C with ${(state.ceiling - summit.coreT).toFixed(0)}°C headroom`;
+  }
+  
+  // KPIs
+  $('runTime').innerHTML = summit.t_min.toFixed(1) + '<small>min</small>';
+  
+  // Ceiling crossing
+  const crossIdx = pts.findIndex(p => p.coreT >= state.ceiling);
+  if (crossIdx >= 0) {
+    const cp = pts[crossIdx];
+    $('crossMile').innerHTML = cp.mi.toFixed(1) + '<small>mi</small>';
+    $('crossCtx').textContent = `at ${cp.alt_ft.toFixed(0)} ft, t=${cp.t_min.toFixed(1)} min`;
+  } else {
+    $('crossMile').innerHTML = '—';
+    $('crossCtx').textContent = 'never exceeded';
+  }
+  
+  // Peak psi (at summit — also could be earlier but typically summit)
+  let peakPsi = 0;
+  for (const p of pts) {
+    const psi = predictPsi(state.coldP, p.coreT, p.ambT, p.alt_ft);
+    if (psi > peakPsi) peakPsi = psi;
+  }
+  $('peakPsi').innerHTML = peakPsi.toFixed(1) + '<small>psi</small>';
+  
+  // In-window distance
+  let inWinKm = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dKm = pts[i].kmFromStart - pts[i-1].kmFromStart;
+    if (pts[i].coreT >= 82 && pts[i].coreT <= state.ceiling) inWinKm += dKm;
+  }
+  const inWinMi = inWinKm / 1.60934;
+  $('inWinMi').innerHTML = inWinMi.toFixed(1) + '<small>mi</small>';
+  
+  // Segment table
+  renderSegments(pts);
+  
+  // Chart
+  drawChart(pts);
+  
+  // Levers
+  renderLevers(pts);
+}
+
+function renderSegments(pts) {
+  const out = $('segments');
+  out.innerHTML = '';
+  for (const S of SEGMENTS) {
+    const inSeg = pts.filter(p => p.mi >= S.start_mi && p.mi <= S.end_mi);
+    if (inSeg.length === 0) continue;
+    const tStart = inSeg[0].coreT;
+    const tEnd = inSeg[inSeg.length-1].coreT;
+    const segMin = inSeg[inSeg.length-1].t_min - inSeg[0].t_min;
+    const ambEnd = inSeg[inSeg.length-1].ambT;
+    
+    const tEndCls = tEnd > state.ceiling ? 'hot' : (tEnd >= 82 ? 'ok' : 'warn');
+    
+    const div = document.createElement('div');
+    div.className = 'segment';
+    div.innerHTML = `
+      <div class="name">${S.name}</div>
+      <div class="row"><span class="k">Distance</span><span class="v">${(S.end_mi-S.start_mi).toFixed(1)} mi</span></div>
+      <div class="row"><span class="k">Alt range</span><span class="v">${S.start_ft.toLocaleString()}→${S.end_ft.toLocaleString()} ft</span></div>
+      <div class="row"><span class="k">Pace</span><span class="v">${state[S.paceVar]} mph</span></div>
+      <div class="row"><span class="k">Time</span><span class="v">${segMin.toFixed(1)} min</span></div>
+      <div class="row"><span class="k">Core in→out</span><span class="v ${tEndCls}">${tStart.toFixed(0)}→${tEnd.toFixed(0)} °C</span></div>
+      <div class="row"><span class="k">Ambient at end</span><span class="v">${ambEnd.toFixed(0)} °C</span></div>
+    `;
+    out.appendChild(div);
+  }
+}
+
+function renderLevers(basePts) {
+  const baseSummit = basePts[basePts.length-1].coreT;
+  
+  const levers = [
+    {name:'Lift in lower 5 mph', desc:'Reduce hysteresis in fastest section',
+     mod:s=>({...s, paceLow:s.paceLow-5, rate:s.rate*0.95})},
+    {name:'Lower start temp 10°C', desc:'Reduce warmer aggression / longer grid wait',
+     mod:s=>({...s, startT:s.startT-10})},
+    {name:'+1 psi cold', desc:'Less deflection, less hysteresis',
+     mod:s=>({...s, coldP:s.coldP+1, rate:s.rate*0.92})},
+    {name:'Less aggressive driving', desc:'Smaller slip angles in turns',
+     mod:s=>({...s, rate:s.rate*0.88})},
+    {name:'Push harder lower', desc:'Bank time, accept heat penalty',
+     mod:s=>({...s, paceLow:s.paceLow+5, rate:s.rate*1.08})},
+    {name:'Cooler ambient (early run)', desc:'Pre-dawn start vs midday',
+     mod:s=>({...s, ambStart:s.ambStart-7})},
+  ];
+  
+  const box = $('leversBox');
+  box.innerHTML = '';
+  levers.forEach(lv => {
+    const save = {...state};
+    Object.assign(state, lv.mod(state));
+    const pts = simulate(state);
+    const newSummit = pts[pts.length-1].coreT;
+    Object.assign(state, save);
+    
+    const delta = newSummit - baseSummit;
+    const cls = delta <= 0 ? '' : 'bad';
+    const sign = delta >= 0 ? '+' : '';
+    
+    const row = document.createElement('div');
+    row.className = 'lever';
+    row.innerHTML = `<div class="name">${lv.name}</div><div class="effect">${lv.desc}</div><div class="delta ${cls}">${sign}${delta.toFixed(1)} °C</div>`;
+    box.appendChild(row);
+  });
+}
+
+// ============ Chart ============
+const canvas = $('chart');
+const cctx = canvas.getContext('2d');
+
+function setupCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  cctx.setTransform(1,0,0,1,0,0);
+  cctx.scale(dpr, dpr);
+}
+window.addEventListener('resize', () => { setupCanvas(); render(); });
+
+function drawChart(pts) {
+  setupCanvas();
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  const padL = 50, padR = 50, padT = 16, padB = 38;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  
+  cctx.fillStyle = '#1a202c';
+  cctx.fillRect(0, 0, W, H);
+  
+  // X: distance 0 to 12.42 mi
+  const xT = mi => padL + (mi / TOTAL_MI) * innerW;
+  // Y left: core temp 40-160
+  const yMin = 40, yMax = 160;
+  const yT = v => padT + (1 - (v - yMin) / (yMax - yMin)) * innerH;
+  // Y right: altitude 9000-15000 ft
+  const altMin = 9000, altMax = 15000;
+  const yAlt = v => padT + (1 - (v - altMin) / (altMax - altMin)) * innerH;
+  
+  // Mfr window band
+  cctx.fillStyle = 'rgba(58, 209, 122, 0.13)';
+  cctx.fillRect(padL, yT(state.ceiling), innerW, yT(82) - yT(state.ceiling));
+  cctx.fillStyle = 'rgba(58, 209, 122, 0.6)';
+  cctx.font = '10px JetBrains Mono';
+  cctx.textAlign = 'right';
+  cctx.fillText(`82–${state.ceiling}°C`, W - padR - 4, yT(93) + 3);
+  
+  // Segment dividers
+  cctx.strokeStyle = 'rgba(167, 139, 250, 0.25)';
+  cctx.lineWidth = 1;
+  cctx.setLineDash([3, 4]);
+  [GLEN_MI, DEVILS_MI].forEach(mi => {
+    cctx.beginPath();
+    cctx.moveTo(xT(mi), padT);
+    cctx.lineTo(xT(mi), H - padB);
+    cctx.stroke();
+  });
+  cctx.setLineDash([]);
+  // Stage labels
+  cctx.fillStyle = '#a78bfa';
+  cctx.font = '9px JetBrains Mono';
+  cctx.textAlign = 'center';
+  cctx.fillText('Glen Cove', xT(GLEN_MI), padT - 4);
+  cctx.fillText("Devil's Pl.", xT(DEVILS_MI), padT - 4);
+  cctx.fillText('Summit', xT(TOTAL_MI) - 16, padT - 4);
+  
+  // Grid (Y left)
+  cctx.strokeStyle = 'rgba(170, 174, 186, 0.10)';
+  cctx.lineWidth = 1;
+  for (let v = yMin; v <= yMax; v += 20) {
+    cctx.beginPath();
+    cctx.moveTo(padL, yT(v));
+    cctx.lineTo(W - padR, yT(v));
+    cctx.stroke();
+    cctx.fillStyle = '#a8aeba';
+    cctx.textAlign = 'right';
+    cctx.font = '10px JetBrains Mono';
+    cctx.fillText(v.toString(), padL - 6, yT(v) + 3);
+  }
+  
+  // X labels
+  cctx.fillStyle = '#a8aeba';
+  cctx.font = '10px JetBrains Mono';
+  cctx.textAlign = 'center';
+  for (let mi = 0; mi <= 12; mi += 2) {
+    cctx.fillText(mi.toString(), xT(mi), H - padB + 14);
+  }
+  cctx.fillStyle = '#6b7280';
+  cctx.font = '9.5px JetBrains Mono';
+  cctx.fillText('distance (mi)', padL + innerW/2, H - 4);
+  
+  // Right axis: altitude
+  cctx.fillStyle = '#a78bfa';
+  cctx.textAlign = 'left';
+  cctx.font = '10px JetBrains Mono';
+  for (let v = 9000; v <= 14000; v += 1000) {
+    cctx.fillText((v/1000).toFixed(0)+'k', W - padR + 5, yAlt(v) + 3);
+  }
+  cctx.fillStyle = '#a78bfa';
+  cctx.font = '9.5px JetBrains Mono';
+  cctx.save();
+  cctx.translate(W - 14, padT + innerH/2);
+  cctx.rotate(Math.PI/2);
+  cctx.textAlign = 'center';
+  cctx.fillText('altitude (kft)', 0, 0);
+  cctx.restore();
+  
+  // Left axis label
+  cctx.fillStyle = '#ffb000';
+  cctx.font = '9.5px JetBrains Mono';
+  cctx.save();
+  cctx.translate(14, padT + innerH/2);
+  cctx.rotate(-Math.PI/2);
+  cctx.textAlign = 'center';
+  cctx.fillText('core temp (°C)', 0, 0);
+  cctx.restore();
+  
+  // Altitude trace (purple, behind)
+  cctx.strokeStyle = '#a78bfa';
+  cctx.lineWidth = 1.5;
+  cctx.globalAlpha = 0.6;
+  cctx.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const x = xT(pts[i].mi);
+    const y = yAlt(pts[i].alt_ft);
+    if (i === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+  }
+  cctx.stroke();
+  cctx.globalAlpha = 1.0;
+  
+  // Core temp trace (orange, foreground)
+  cctx.strokeStyle = '#ffb000';
+  cctx.lineWidth = 2.4;
+  cctx.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const x = xT(pts[i].mi);
+    const y = yT(pts[i].coreT);
+    if (i === 0) cctx.moveTo(x, y); else cctx.lineTo(x, y);
+  }
+  cctx.stroke();
+  
+  // Ceiling crossing marker
+  const crossIdx = pts.findIndex(p => p.coreT >= state.ceiling);
+  if (crossIdx >= 0) {
+    const cp = pts[crossIdx];
+    cctx.fillStyle = '#ff5b3a';
+    cctx.beginPath();
+    cctx.arc(xT(cp.mi), yT(state.ceiling), 5, 0, Math.PI*2);
+    cctx.fill();
+    cctx.strokeStyle = '#ff5b3a';
+    cctx.setLineDash([3,3]);
+    cctx.beginPath();
+    cctx.moveTo(xT(cp.mi), padT);
+    cctx.lineTo(xT(cp.mi), H - padB);
+    cctx.stroke();
+    cctx.setLineDash([]);
+    cctx.font = '10px JetBrains Mono';
+    cctx.textAlign = 'left';
+    cctx.fillStyle = '#ff5b3a';
+    const lblX = Math.min(xT(cp.mi) + 8, W - padR - 60);
+    cctx.fillText(`exit @ ${cp.mi.toFixed(1)} mi`, lblX, yT(state.ceiling) + 4);
+  }
+  
+  // Start marker
+  cctx.fillStyle = '#3aa3ff';
+  cctx.beginPath();
+  cctx.arc(xT(0), yT(state.startT), 5, 0, Math.PI*2);
+  cctx.fill();
+  cctx.font = '10px JetBrains Mono';
+  cctx.textAlign = 'left';
+  cctx.fillStyle = '#3aa3ff';
+  cctx.fillText(`start ${state.startT}°C`, xT(0)+8, yT(state.startT)+4);
+}
+
+// ============ Wire up ============
+const wireSlider = (id, valId, key, fmt) => {
+  $(id).addEventListener('input', e => {
+    state[key] = parseFloat(e.target.value);
+    $(valId).textContent = fmt(state[key]);
+    render();
+  });
+};
+
+wireSlider('rateInput',  'rateVal',     'rate',     v => v.toFixed(2));
+wireSlider('startT',     'startTVal',   'startT',   v => v + ' °C');
+wireSlider('coldP',      'coldPVal',    'coldP',    v => v.toFixed(1) + ' psi');
+wireSlider('paceLow',    'paceLowVal',  'paceLow',  v => v + ' mph');
+wireSlider('paceMid',    'paceMidVal',  'paceMid',  v => v + ' mph');
+wireSlider('paceTop',    'paceTopVal',  'paceTop',  v => v + ' mph');
+wireSlider('ambStart',   'ambStartVal', 'ambStart', v => v + ' °C');
+wireSlider('lapse',      'lapseVal',    'lapse',    v => v.toFixed(1) + ' °C/kft');
+
+// Preset buttons
+document.querySelectorAll('#calib-presets button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#calib-presets button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    state.rate = parseFloat(b.dataset.val);
+    $('rateInput').value = state.rate;
+    $('rateVal').textContent = state.rate.toFixed(2);
+    render();
+  });
+});
+document.querySelectorAll('#ceiling-presets button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#ceiling-presets button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    state.ceiling = parseFloat(b.dataset.val);
+    render();
+  });
+});
+
+// Initial render
+setupCanvas();
+render();
+</script>
+</body>
+</html>
